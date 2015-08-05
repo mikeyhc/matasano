@@ -1,0 +1,15 @@
+{application, matasano,
+ [
+  {description, "An Erlang matasano library"},
+  {vsn, "1"},
+  {modules, [
+             matasano,
+             matasano_bytes
+            ]},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, []}
+ ]}.
