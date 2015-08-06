@@ -41,13 +41,17 @@ binary_to_hex(S) ->
     end,
     {hex, binary_foldl(Fun, <<>>, S)}.
 
-% convert a hex type to a base64 type
--spec hex_to_base64(hex() | binary()) -> base64().
-hex_to_base64({hex, _String}) -> throw(not_implemented).
+%% convert base64 type to a binary string
+-spec base64_to_binary(base64()) -> binary().
+base64_to_binary({base64, S}) -> base64_to_binary(S, <<>>).
 
 % convert a base64 type to a hex type
 -spec base64_to_hex(base64()) -> hex().
 base64_to_hex({base64, _String}) -> throw(not_implemented).
+
+% convert a hex type to a base64 type
+-spec hex_to_base64(hex() | binary()) -> base64().
+hex_to_base64({hex, _String}) -> throw(not_implemented).
 
 %% Helper Methods
 
@@ -59,9 +63,19 @@ to_base64_char(B) when B >= 52 andalso B =< 61 -> B - 4;
 to_base64_char(62) -> 43;
 to_base64_char(63) -> 47.
 
+% convert a base64 value to its original byte
+-spec from_base64_char(byte()) -> byte().
+from_base64_char(C) when C >= 65 andalso C =< 90 -> C - 65;
+from_base64_char(C) when C >= 97 andalso C =< 122 -> C - 71;
+from_base64_char(C) when C >= 48 andalso C =< 57 -> C + 4;
+from_base64_char(43) -> 62;
+from_base64_char(63) -> 47.
+
+% convert a hex byte to its a printable representation
 to_hex_char(X) when X >= 0 andalso X =< 9 -> X + 48;
 to_hex_char(X) when X >= 10 andalso X =< 15 -> X + 55.
 
+% convert a byte to a printable hex representation
 byte_to_hex(<<A:4, B:4>>) ->
     HA = to_hex_char(A),
     HB = to_hex_char(B),
@@ -102,3 +116,24 @@ bytes_to_base64(<<A:16>>) ->
 bytes_to_base64(A) ->
     <<S:6, T:2, U:4, V:4, W:2, X:6>> = A,
     binary_map(fun to_base64_char/1, <<S:8, T:4, U:4, V:6, W:2, X:8>>).
+
+% conver a base64 string to its binary representation
+-spec base64_to_binary(binary(), binary()) -> binary().
+base64_to_binary(<<>>, Acc) -> Acc;
+base64_to_binary(<<H:32, T/binary>>, Acc) ->
+    BH = base64_to_bytes(<<H:32>>),
+    base64_to_binary(T, <<Acc/binary, BH/binary>>).
+
+% convert 4 base64 encoded bytes into at most 3 decimal values
+-spec base64_to_bytes(<<_:32>>) -> <<_:8>> | <<_:16>> | <<_:24>>.
+base64_to_bytes(<<A, B, 61, 61>>) ->
+    <<_:2, S:6, _:2, T:2, _:4>> = binary_map(fun from_base64_char/1, <<A, B>>),
+    <<S:6, T:2>>;
+base64_to_bytes(<<A, B, C, 61>>) ->
+    DS = binary_map(fun from_base64_char/1, <<A, B, C>>),
+    <<_:2, S:6, _:2, T:2, U:4, _:2, V:4, _:2>> = DS,
+    <<S:6, T:2, U:4, V:4>>;
+base64_to_bytes(Str) ->
+    DS = binary_map(fun from_base64_char/1, Str),
+    <<_:2, S:6, _:2, T:2, U:4, _:2, V:4, W:2, _:2, X:6>> = DS,
+    <<S:6, T:2, U:4, V:4, W:2, X:6>>.
