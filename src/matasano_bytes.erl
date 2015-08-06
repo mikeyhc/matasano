@@ -16,6 +16,8 @@
 -opaque base64()     :: {base64, binary()}.
 -opaque bytestring() :: hex() | base64().
 
+%% New API
+
 % create a hex type with the given binary string (no conversion)
 -spec new_hex(binary()) -> hex().
 new_hex(S) when is_binary(S) -> {hex, S}.
@@ -24,9 +26,20 @@ new_hex(S) when is_binary(S) -> {hex, S}.
 -spec new_base64(binary()) -> base64().
 new_base64(S) when is_binary(S) -> {base64, S}.
 
+%% Conversion API
+
 % convert a string binary to a base64 type
 -spec binary_to_base64(binary()) -> binary().
 binary_to_base64(S) -> {base64, binary_to_base64(S, <<>>)}.
+
+% convert a string binary to a hex type
+-spec binary_to_hex(binary()) -> binary().
+binary_to_hex(S) ->
+    Fun = fun(A, X) ->
+            B = byte_to_hex(X),
+            <<A/binary, B>>
+    end,
+    {hex, binary_foldl(Fun, <<>>, S)}.
 
 % convert a hex type to a base64 type
 -spec hex_to_base64(hex() | binary()) -> base64().
@@ -46,13 +59,25 @@ to_base64_char(B) when B >= 52 andalso B =< 61 -> B - 4;
 to_base64_char(62) -> 43;
 to_base64_char(63) -> 47.
 
+to_hex_char(X) when X >= 0 andalso X =< 9 -> X + 48;
+to_hex_char(X) when X >= 10 andalso X =< 15 -> X + 55.
+
+byte_to_hex(<<A:4, B:4>>) ->
+    HA = to_hex_char(A),
+    HB = to_hex_char(B),
+    <<HA, HB>>.
+
 % map F over the binary B
 -spec binary_map(fun((byte()) -> byte()), binary()) -> binary().
 binary_map(F, B) ->  binary:list_to_bin(lists:map(F, binary:bin_to_list(B))).
 
-%% convert a binary string into its base64 representation
+% fold from the left using F over the binary B starting with accumulator A
+-spec binary_foldl(fun((A, byte()) -> A), A, binary()) -> A.
+binary_foldl(F, A, B) -> lists:foldl(F, A, binary:bin_to_list(B)).
+
+% convert a binary string into its base64 representation
 -spec binary_to_base64(binary(), binary()) -> binary().
-binary_to_base64(<<>>, Acc) -> lists:map(to_base64_char, Acc);
+binary_to_base64(<<>>, Acc) -> Acc;
 binary_to_base64(S= <<_:8>>, Acc) ->
     Last = bytes_to_base64(S),
     <<Acc/binary, Last/binary, "==">>;
