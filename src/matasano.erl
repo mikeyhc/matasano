@@ -3,7 +3,8 @@
 -export([ % set 1
           set_1/0,
           challenge_1_1/0,
-          challenge_1_2/0
+          challenge_1_2/0,
+          challenge_1_3/0
         ]).
 
 
@@ -11,7 +12,8 @@
 
 set_1_list() ->
     [ {1, fun challenge_1_1/0},
-      {2, fun challenge_1_2/0}
+      {2, fun challenge_1_2/0},
+      {3, fun challenge_1_3/0}
     ].
 
 set_1() ->
@@ -59,6 +61,18 @@ challenge_1_2() ->
     io:format("actual hex:     ~s~n", [matasano_bytes:hex_binary(AHex3)]),
     io:format("actual plain:   ~s~n", [APlain]),
     Hex3 =:= AHex3 andalso Plain =:= APlain.
+
+challenge_1_3() ->
+    Hex = matasano_bytes:new_hex(<<"1b37373331363f78151b7f2b783431333"
+                                   "d78397828372d363c78373e783a393b37"
+                                   "36">>),
+    OutChar = 88,
+    OutBinary = <<"Cooking MC's like a pound of bacon">>,
+    {AChar, ABinary} = matasano_guess:hex_single_byte_xor(Hex),
+    io:format("input hex:       ~s~n", [matasano_bytes:hex_binary(Hex)]),
+    io:format("expected output: {~w, ~s}~n", [OutChar, OutBinary]),
+    io:format("actual output:   {~w, ~s}~n", [AChar, ABinary]),
+    OutChar =:= AChar andalso OutBinary =:= ABinary.
 
 %% Helper functions
 

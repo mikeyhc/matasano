@@ -28,7 +28,11 @@
           %% binary-binary
           binary_binary_fixed_xor/2,
           %% hex-hex
-          hex_hex_fixed_xor/2
+          hex_hex_fixed_xor/2,
+
+          % Helper Functions
+          binary_map/2,
+          binary_foldl/3
         ]).
 
 -opaque hex()        :: {hex, binary()}.
