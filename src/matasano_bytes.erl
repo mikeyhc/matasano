@@ -27,6 +27,7 @@
           % Combination API
           %% binary-binary
           binary_binary_fixed_xor/2,
+          binary_binary_repeating_xor/2,
           %% hex-hex
           hex_hex_fixed_xor/2,
 
@@ -93,7 +94,24 @@ hex_to_base64({hex, S}) -> binary_to_base64(hex_to_binary(S, <<>>)).
 -spec binary_binary_fixed_xor(binary(), binary()) -> binary().
 binary_binary_fixed_xor(A, B) -> binary_binary_fixed_xor(A, B, <<>>).
 
+% perform a repeating XOR over the first binary using the second binary
+% as a key
+-spec binary_binary_repeating_xor(binary(), binary()) -> binary().
+binary_binary_repeating_xor(InString, Key) ->
+    KeyFold = fun(X, {AStr, <<>>}) ->
+                      <<KH, KT/binary>> = Key,
+                      NC = X bxor KH,
+                      {<<AStr/binary, NC>>, KT};
+                 (X, {AStr, AKey}) ->
+                      <<KH, KT/binary>> = AKey,
+                      NC = X bxor KH,
+                      {<<AStr/binary, NC>>, KT}
+              end,
+    {R, _} = binary_foldl(KeyFold, {<<>>, Key}, InString),
+    R.
+
 % perform a fixed XOR on two hex objects
+-spec hex_hex_fixed_xor(hex(), hex()) -> hex().
 hex_hex_fixed_xor({hex, A}, {hex, B}) ->
     binary_to_hex(
         binary_binary_fixed_xor(

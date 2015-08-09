@@ -4,7 +4,9 @@
           set_1/0,
           challenge_1_1/0,
           challenge_1_2/0,
-          challenge_1_3/0
+          challenge_1_3/0,
+          challenge_1_4/0,
+          challenge_1_5/0
         ]).
 
 
@@ -13,7 +15,9 @@
 set_1_list() ->
     [ {1, fun challenge_1_1/0},
       {2, fun challenge_1_2/0},
-      {3, fun challenge_1_3/0}
+      {3, fun challenge_1_3/0},
+      {4, fun challenge_1_4/0},
+      {5, fun challenge_1_5/0}
     ].
 
 set_1() ->
@@ -73,6 +77,44 @@ challenge_1_3() ->
     io:format("expected output: {~w, ~s}~n", [OutChar, OutBinary]),
     io:format("actual output:   {~w, ~s}~n", [AChar, ABinary]),
     OutChar =:= AChar andalso OutBinary =:= ABinary.
+
+challenge_1_4() ->
+    Line = 157,
+    Byte = 53,
+    Binary = <<"Now that the party is jumping\n">>,
+    File = "data/s1c4.txt",
+    {ok, InString} = file:read_file(File),
+    NewLineSplit = fun(X, Acc) ->
+                           Hd = hd(Acc), Tl = tl(Acc),
+                           if X =:= 10 -> [<<>>|Acc];
+                              true     -> [<<Hd/binary, X>>|Tl]
+                           end
+                   end,
+    Strings = matasano_bytes:binary_foldl(NewLineSplit, [<<>>], InString),
+    HexStrings = lists:map(fun matasano_bytes:new_hex/1, Strings),
+    {ALine, AByte, ABinary} =
+        matasano_guess:hex_detect_single_byte_xor(HexStrings),
+    io:format("input file:      ~w~n", [File]),
+    io:format("expected output: {~w, ~w, <<\"~s\">>}~n",
+              [Line, Byte, Binary]),
+    io:format("actual output:   {~w, ~w, <<\"~s\">>}~n",
+              [ALine, AByte, ABinary]),
+    Line =:= ALine andalso Byte =:= AByte andalso Binary =:= ABinary.
+
+challenge_1_5() ->
+    Plain = <<"Burning 'em, if you ain't quick and nimble\n"
+              "I go crazy when I hear a cymbal">>,
+    Key = <<"ICE">>,
+    Hex = <<"0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c"
+            "2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b"
+            "2027630c692b20283165286326302e27282f">>,
+    AHex = matasano_bytes:binary_to_hex(
+             matasano_bytes:binary_binary_repeating_xor(Plain, Key)),
+    io:format("input binary:    ~s~n", [Plain]),
+    io:format("input key:       ~s~n", [Key]),
+    io:format("expected output: ~s~n", [Hex]),
+    io:format("actual output:   ~w~n", [matasano_bytes:hex_binary(AHex)]),
+    Hex =:= matasano_bytes:hex_binary(AHex).
 
 %% Helper functions
 

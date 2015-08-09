@@ -1,5 +1,9 @@
 -module(matasano_guess).
--export([hex_single_byte_xor/1]).
+-export([hex_single_byte_xor/1,
+         hex_detect_single_byte_xor/1
+        ]).
+
+%% Globals
 
 % a list of the frequency scores of all the lowercase letters and space
 letter_scores() ->
@@ -9,9 +13,32 @@ letter_scores() ->
                   0.98,  2.36,  0.15,  1.97,  0.07 ],
     [{32, 13.00}|lists:zip(lists:seq(97,122), ValueList)].
 
+%% API
+
 % attempt to decode a hex string which was XOR'd against a single
 % character prior to being hex encoded
 hex_single_byte_xor(HexText) ->
+    {Byte, Text, _Score} = hex_single_byte_xor_triple(HexText),
+    {Byte, Text}.
+
+% search a list of strings for the string most likely to be XOR'd
+hex_detect_single_byte_xor(StringList) ->
+    NSL = lists:zip(lists:seq(2, length(StringList)), tl(StringList)),
+    HighestVal = fun({Q, X}, Acc={_, {_, _, AS}}) ->
+                         {B, T, S} = hex_single_byte_xor_triple(X),
+                         if S > AS -> {Q, {B, T, S}};
+                            true   -> Acc
+                         end
+                 end,
+    Init = {1, hex_single_byte_xor_triple(hd(StringList))},
+    {Line, {Byte, Text, _Score}} = lists:foldl(HighestVal, Init, NSL),
+    {Line, Byte, Text}.
+
+%% Helper Functions
+
+% decode a hexstring and return the most likely single XOR'd
+% string along with the XOR byte and character frequency score
+hex_single_byte_xor_triple(HexText) ->
     CipherText = matasano_bytes:hex_to_binary(HexText),
     HighestFun = fun(Byte, Acc={_, _, AS}) ->
                          {T, S} = score_text(CipherText, Byte),
@@ -19,10 +46,8 @@ hex_single_byte_xor(HexText) ->
                             true   -> Acc
                          end
                  end,
-    {Byte, Text, _Score} = lists:foldl(HighestFun,
-                                       score_text(CipherText, 0),
-                                       lists:seq(1, 255)),
-    {Byte, Text}.
+    {IT, IS} = score_text(CipherText, 0),
+    lists:foldl(HighestFun, {0, IT, IS}, lists:seq(1, 255)).
 
 % calculate the output text and letter frequency score of the
 % ciphertext assuming it has been xor'd with the given byte
